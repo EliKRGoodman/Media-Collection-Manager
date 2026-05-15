@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    container_name: media_collection_db
+    environment:
+      POSTGRES_USER: media_user
+      POSTGRES_PASSWORD: media_password
+      POSTGRES_DB: media_collection
+    ports:
+      - "5432:5432"
+    volumes:
+      - media_collection_pgdata:/var/lib/postgresql/data
+
+volumes:
+  media_collection_pgdata:
