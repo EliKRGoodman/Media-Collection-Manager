@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.models.collection_item_tag import collection_item_tags
 from app.db.base import Base
 
 
@@ -49,5 +50,11 @@ class CollectionItem(Base):
 
     album = relationship(
         "Album",
+        back_populates="collection_items",
+    )
+
+    tags = relationship(
+        "Tag",
+        secondary=collection_item_tags,
         back_populates="collection_items",
     )
