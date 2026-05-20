@@ -122,24 +122,53 @@ def list_collection_items(
     # /collection-items/?tag=favorite
     tag: str | None = Query(default=None),
 
+    # Optional sort field.
+    #
+    # Supported values:
+    # - artist
+    # - release_year
+    # - genre
+    #
+    # Example:
+    # /collection-items/?sort_by=artist
+    sort_by: str | None = Query(default=None),
+
+    # Sort direction.
+    #
+    # Supported values:
+    # - asc
+    # - desc
+    #
+    # Example:
+    # /collection-items/?sort_order=desc
+    sort_order: str = Query(default="asc"),
+
     db: Session = Depends(get_db),
 ):
     """
-    Return collection items with optional filtering.
+    Return collection items with optional filtering and sorting.
 
-    Supported filters:
+    Current filters:
     - genre
     - tag
 
-    Filters can be combined later as the API evolves.
+    Current sorting:
+    - artist
+    - release_year
+    - genre
     """
 
     # Start with a base query selecting collection items.
     query = select(CollectionItem)
 
-    # Filter by album genre if provided.
     #
-    # Because genre lives on Album, we join Album.
+    # FILTERING
+    #
+
+    # Filter by album genre.
+    #
+    # We join Album because genre belongs to Album,
+    # not CollectionItem.
     if genre:
         query = (
             query
@@ -147,9 +176,9 @@ def list_collection_items(
             .where(Album.genre.ilike(f"%{genre}%"))
         )
 
-    # Filter by tag name if provided.
+    # Filter by tag.
     #
-    # Because tags are many-to-many, we join through
+    # Tags are many-to-many, so this joins through
     # the CollectionItem.tags relationship.
     if tag:
         query = (
@@ -158,7 +187,67 @@ def list_collection_items(
             .where(Tag.name.ilike(f"%{tag}%"))
         )
 
-    # Execute query and return ORM objects.
+    #
+    # SORTING
+    #
+
+    # Normalize sort order so the API is case-insensitive.
+    sort_order = sort_order.lower()
+
+    # Sort by artist name.
+    #
+    # Artist name lives on Artist,
+    # so we must join through Album -> Artist.
+    if sort_by == "artist":
+
+        query = (
+            query
+            .join(CollectionItem.album)
+            .join(Album.artist)
+        )
+
+        if sort_order == "desc":
+            query = query.order_by(Artist.name.desc())
+        else:
+            query = query.order_by(Artist.name.asc())
+
+    # Sort by release year.
+    elif sort_by == "release_year":
+
+        query = query.join(CollectionItem.album)
+
+        if sort_order == "desc":
+            query = query.order_by(Album.release_year.desc())
+        else:
+            query = query.order_by(Album.release_year.asc())
+
+    # Sort by genre.
+    elif sort_by == "genre":
+
+        query = query.join(CollectionItem.album)
+
+        if sort_order == "desc":
+            query = query.order_by(Album.genre.desc())
+        else:
+            query = query.order_by(Album.genre.asc())
+
+    # Sort by album title.
+    #
+    # Album title lives on Album, so we join from
+    # CollectionItem -> Album before ordering.
+    elif sort_by in ("album", "album_title"):
+
+        query = query.join(CollectionItem.album)
+
+        if sort_order == "desc":
+            query = query.order_by(Album.title.desc())
+        else:
+            query = query.order_by(Album.title.asc())
+            
+    # Execute query.
+    #
+    # `.unique()` prevents duplicate ORM objects when joins
+    # produce repeated rows internally.
     items = db.scalars(query).unique().all()
 
     return [
@@ -175,13 +264,13 @@ def list_collection_items(
             album_rating=item.album_rating,
             date_added=item.date_added,
 
-            # Convert Tag ORM objects into simple string names.
+            # Convert Tag ORM objects into simple strings.
             tags=[
                 tag.name
                 for tag in item.tags
             ],
 
-            # Convert Track ORM objects into API response schemas.
+            # Convert Track ORM objects into API schemas.
             tracks=[
                 TrackRead.model_validate(track)
                 for track in item.album.tracks
