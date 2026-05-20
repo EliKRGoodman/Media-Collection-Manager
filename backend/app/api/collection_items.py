@@ -7,6 +7,7 @@ from app.models.album import Album
 from app.models.artist import Artist
 from app.models.collection_item import CollectionItem
 from app.schemas.collection_item import CollectionItemCreate, CollectionItemRead
+from app.models.tag import Tag
 
 router = APIRouter(prefix="/collection-items", tags=["collection items"])
 
@@ -51,6 +52,18 @@ def create_collection_item(
         album_rating=item_in.album_rating,
     )
 
+    tag_names = {tag.strip() for tag in item_in.tags if tag.strip()}
+
+    for tag_name in tag_names:
+        tag = db.scalar(select(Tag).where(Tag.name == tag_name))
+
+        if tag is None:
+            tag = Tag(name=tag_name)
+            db.add(tag)
+            db.flush()
+
+        item.tags.append(tag)
+
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -67,6 +80,7 @@ def create_collection_item(
         price=item.price,
         album_rating=item.album_rating,
         date_added=item.date_added,
+        tags=[tag.name for tag in item.tags],
     )
 
 
@@ -87,6 +101,7 @@ def list_collection_items(db: Session = Depends(get_db)):
             price=item.price,
             album_rating=item.album_rating,
             date_added=item.date_added,
+            tags=[tag.name for tag in item.tags],
         )
         for item in items
     ]

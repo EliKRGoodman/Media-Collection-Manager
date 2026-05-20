@@ -38,3 +38,17 @@ class Album(Base):
         "CollectionItem",
         back_populates="album",
     )
+
+        # One-to-many relationship:
+    # one album can contain many tracks.
+    #
+    # Example:
+    # Album: OK Computer
+    # Tracks:
+    #   Airbag
+    #   Paranoid Android
+    #   Subterranean Homesick Alien
+    tracks = relationship(
+        "Track",
+        back_populates="album",
+    )

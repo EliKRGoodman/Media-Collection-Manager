@@ -14,6 +14,7 @@ class CollectionItemCreate(BaseModel):
     location: str | None = None
     price: Decimal | None = None
     album_rating: int | None = Field(default=None, ge=1, le=10)
+    tags: list[str] = []
 
 
 class CollectionItemRead(BaseModel):
@@ -28,5 +29,6 @@ class CollectionItemRead(BaseModel):
     price: Decimal | None
     album_rating: int | None
     date_added: datetime
+    tags: list[str]
 
     model_config = {"from_attributes": True}
