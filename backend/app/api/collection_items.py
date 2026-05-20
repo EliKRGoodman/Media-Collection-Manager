@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, Query
 
 from app.db.deps import get_db
 from app.models.album import Album
@@ -8,6 +9,8 @@ from app.models.artist import Artist
 from app.models.collection_item import CollectionItem
 from app.schemas.collection_item import CollectionItemCreate, CollectionItemRead
 from app.models.tag import Tag
+from app.models.track import Track
+from app.schemas.collection_item import CollectionItemCreate, CollectionItemRead, TrackRead
 
 router = APIRouter(prefix="/collection-items", tags=["collection items"])
 
@@ -52,6 +55,23 @@ def create_collection_item(
         album_rating=item_in.album_rating,
     )
 
+    # If this is a brand-new album, attach any incoming tracks to it.
+    #
+    # Important V1 behavior:
+    # If the album already exists, we do NOT blindly add tracks again.
+    # This prevents duplicate tracklists when adding multiple owned copies
+    # of the same album.
+    if not album.tracks:
+        for track_in in item_in.tracks:
+            track = Track(
+                album_id=album.id,
+                title=track_in.title,
+                track_number=track_in.track_number,
+                runtime_seconds=track_in.runtime_seconds,
+                rating=track_in.rating,
+            )
+            db.add(track)
+
     tag_names = {tag.strip() for tag in item_in.tags if tag.strip()}
 
     for tag_name in tag_names:
@@ -81,12 +101,65 @@ def create_collection_item(
         album_rating=item.album_rating,
         date_added=item.date_added,
         tags=[tag.name for tag in item.tags],
+        tracks=[
+            TrackRead.model_validate(track)
+            for track in album.tracks
+        ],
     )
 
 
 @router.get("/", response_model=list[CollectionItemRead])
-def list_collection_items(db: Session = Depends(get_db)):
-    items = db.scalars(select(CollectionItem)).all()
+def list_collection_items(
+    # Optional genre filter.
+    #
+    # Example:
+    # /collection-items/?genre=Electronic
+    genre: str | None = Query(default=None),
+
+    # Optional tag filter.
+    #
+    # Example:
+    # /collection-items/?tag=favorite
+    tag: str | None = Query(default=None),
+
+    db: Session = Depends(get_db),
+):
+    """
+    Return collection items with optional filtering.
+
+    Supported filters:
+    - genre
+    - tag
+
+    Filters can be combined later as the API evolves.
+    """
+
+    # Start with a base query selecting collection items.
+    query = select(CollectionItem)
+
+    # Filter by album genre if provided.
+    #
+    # Because genre lives on Album, we join Album.
+    if genre:
+        query = (
+            query
+            .join(CollectionItem.album)
+            .where(Album.genre.ilike(f"%{genre}%"))
+        )
+
+    # Filter by tag name if provided.
+    #
+    # Because tags are many-to-many, we join through
+    # the CollectionItem.tags relationship.
+    if tag:
+        query = (
+            query
+            .join(CollectionItem.tags)
+            .where(Tag.name.ilike(f"%{tag}%"))
+        )
+
+    # Execute query and return ORM objects.
+    items = db.scalars(query).unique().all()
 
     return [
         CollectionItemRead(
@@ -101,7 +174,18 @@ def list_collection_items(db: Session = Depends(get_db)):
             price=item.price,
             album_rating=item.album_rating,
             date_added=item.date_added,
-            tags=[tag.name for tag in item.tags],
+
+            # Convert Tag ORM objects into simple string names.
+            tags=[
+                tag.name
+                for tag in item.tags
+            ],
+
+            # Convert Track ORM objects into API response schemas.
+            tracks=[
+                TrackRead.model_validate(track)
+                for track in item.album.tracks
+            ],
         )
         for item in items
     ]
