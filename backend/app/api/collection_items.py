@@ -110,6 +110,8 @@ def create_collection_item(
 
 @router.get("/", response_model=list[CollectionItemRead])
 def list_collection_items(
+
+    search: str | None = Query(default=None),
     # Optional genre filter.
     #
     # Example:
@@ -121,6 +123,7 @@ def list_collection_items(
     # Example:
     # /collection-items/?tag=favorite
     tag: str | None = Query(default=None),
+
 
     # Optional sort field.
     #
@@ -187,6 +190,26 @@ def list_collection_items(
             .where(Tag.name.ilike(f"%{tag}%"))
         )
 
+    # Search by artist name, album title, or track title.
+    #
+    # This is an early version of "soft search":
+    # - case-insensitive
+    # - partial matching
+    #
+    # Later we can add true fuzzy/typo-tolerant search.
+    if search:
+        query = (
+            query
+            .join(CollectionItem.album)
+            .join(Album.artist)
+            .outerjoin(Album.tracks)
+            .where(
+                Artist.name.ilike(f"%{search}%")
+                | Album.title.ilike(f"%{search}%")
+                | Track.title.ilike(f"%{search}%")
+            )
+        )
+        
     #
     # SORTING
     #
