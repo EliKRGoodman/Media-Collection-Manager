@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from app.models.location import Location
 from app.db.deps import get_db
 from app.models.album import Album
 from app.models.artist import Artist
@@ -50,11 +51,27 @@ def create_collection_item(
         db.add(album)
         db.flush()
 
+    # Reuse or create a Location when a location name is provided.
+    #
+    # CollectionItem now stores location_id, not a plain text location.
+    # This keeps locations as real reusable domain objects.
+    location = None
+
+    if item_in.location_name:
+        location = db.scalar(
+            select(Location).where(Location.name == item_in.location_name)
+        )
+
+        if location is None:
+            location = Location(name=item_in.location_name)
+            db.add(location)
+            db.flush()
+
     item = CollectionItem(
         album_id=album.id,
         condition=item_in.condition,
         notes=item_in.notes,
-        location=item_in.location,
+        location_id=location.id if location else None,
         price=item_in.price,
         album_rating=item_in.album_rating,
     )
@@ -100,7 +117,7 @@ def create_collection_item(
         genre=album.genre,
         condition=item.condition,
         notes=item.notes,
-        location=item.location,
+        location_name=item.location.name if item.location else None,
         price=item.price,
         album_rating=item.album_rating,
         date_added=item.date_added,
@@ -340,7 +357,7 @@ def list_collection_items(
             genre=item.album.genre,
             condition=item.condition,
             notes=item.notes,
-            location=item.location,
+            location_name=item.location.name if item.location else None,
             price=item.price,
             album_rating=item.album_rating,
             date_added=item.date_added,
@@ -404,7 +421,6 @@ def update_collection_item(
     for field in [
         "condition",
         "notes",
-        "location",
         "price",
         "album_rating",
     ]:
@@ -438,6 +454,36 @@ def update_collection_item(
 
         item.tags = new_tags
 
+    # If location_name was provided, update the item's Location.
+    #
+    # - If location_name is a real string, reuse/create that Location.
+    # - If location_name is None, clear the location.
+    if "location_name" in update_data:
+
+        location_name = update_data["location_name"]
+
+        # Clear location if explicitly set to null.
+        if location_name is None:
+            item.location_id = None
+
+        else:
+            # Try to reuse an existing Location first.
+            location = db.scalar(
+                select(Location).where(
+                    Location.name == location_name
+                )
+            )
+
+            # Create Location if it does not exist yet.
+            if location is None:
+                location = Location(name=location_name)
+
+                db.add(location)
+                db.flush()
+
+            # Attach collection item to the Location.
+            item.location_id = location.id
+
     db.commit()
     db.refresh(item)
 
@@ -449,7 +495,7 @@ def update_collection_item(
         genre=item.album.genre,
         condition=item.condition,
         notes=item.notes,
-        location=item.location,
+        location_name=item.location.name if item.location else None,
         price=item.price,
         album_rating=item.album_rating,
         date_added=item.date_added,

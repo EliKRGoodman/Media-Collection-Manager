@@ -51,7 +51,7 @@ class CollectionItemCreate(BaseModel):
     genre: str | None = None
     condition: str | None = None
     notes: str | None = None
-    location: str | None = None
+    location_name: str | None = None
     price: Decimal | None = None
     album_rating: int | None = Field(default=None, ge=1, le=10)
     tags: list[str] = []
@@ -67,7 +67,7 @@ class CollectionItemUpdate(BaseModel):
 
     condition: str | None = None
     notes: str | None = None
-    location: str | None = None
+    location_name: str | None = None
     price: Decimal | None = None
     album_rating: int | None = Field(default=None, ge=1, le=10)
 
@@ -95,7 +95,7 @@ class CollectionItemRead(BaseModel):
     genre: str | None
     condition: str | None
     notes: str | None
-    location: str | None
+    location_name: str | None
     price: Decimal | None
     album_rating: int | None
     date_added: datetime
