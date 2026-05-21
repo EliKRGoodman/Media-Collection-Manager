@@ -48,6 +48,8 @@ def create_collection_item(
             genre=item_in.genre,
             image_url=item_in.image_url,
             artist_id=artist.id,
+            musicbrainz_id=item_in.musicbrainz_id,
+            discogs_id=item_in.discogs_id,
         )
         db.add(album)
         db.flush()
@@ -117,6 +119,8 @@ def create_collection_item(
         release_year=album.release_year,
         genre=album.genre,
         image_url=item.album.image_url,
+        musicbrainz_id=item.album.musicbrainz_id,
+        discogs_id=item.album.discogs_id,
         condition=item.condition,
         notes=item.notes,
         location_name=item.location.name if item.location else None,
@@ -358,6 +362,8 @@ def list_collection_items(
             release_year=item.album.release_year,
             genre=item.album.genre,
             image_url=item.album.image_url,
+            musicbrainz_id=item.album.musicbrainz_id,
+            discogs_id=item.album.discogs_id,
             condition=item.condition,
             notes=item.notes,
             location_name=item.location.name if item.location else None,
@@ -497,6 +503,8 @@ def update_collection_item(
         release_year=item.album.release_year,
         genre=item.album.genre,
         image_url=item.album.image_url,
+        musicbrainz_id=item.album.musicbrainz_id,
+        discogs_id=item.album.discogs_id,
         condition=item.condition,
         notes=item.notes,
         location_name=item.location.name if item.location else None,

@@ -50,6 +50,8 @@ class CollectionItemCreate(BaseModel):
     release_year: int | None = None
     genre: str | None = None
     image_url: str | None = None
+    musicbrainz_id: str | None = None
+    discogs_id: str | None = None
     condition: str | None = None
     notes: str | None = None
     location_name: str | None = None
@@ -95,6 +97,8 @@ class CollectionItemRead(BaseModel):
     release_year: int | None
     genre: str | None
     image_url: str | None
+    musicbrainz_id: str | None
+    discogs_id: str | None
     condition: str | None
     notes: str | None
     location_name: str | None

@@ -49,6 +49,28 @@ class Album(Base):
         nullable=True,
     )
 
+    # External metadata source identifiers.
+    #
+    # These let us reconnect local albums to external APIs later.
+    #
+    # Example future uses:
+    # - refresh metadata
+    # - fetch updated images
+    # - open Discogs page
+    # - sync Spotify/Wikipedia data
+
+    musicbrainz_id: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        unique=True,
+    )
+
+    discogs_id: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        unique=True,
+    )
+
     collection_items = relationship(
         "CollectionItem",
         back_populates="album",
