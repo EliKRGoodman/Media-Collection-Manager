@@ -9,7 +9,12 @@ from app.models.collection_item import CollectionItem
 from app.schemas.collection_item import CollectionItemCreate, CollectionItemRead
 from app.models.tag import Tag
 from app.models.track import Track
-from app.schemas.collection_item import CollectionItemCreate, CollectionItemRead, TrackRead
+from app.schemas.collection_item import (
+    CollectionItemCreate,
+    CollectionItemRead,
+    CollectionItemUpdate,
+    TrackRead,
+)
 
 router = APIRouter(prefix="/collection-items", tags=["collection items"])
 
@@ -319,6 +324,7 @@ def list_collection_items(
     # limit controls page size.
     # offset controls where the page starts.
     query = query.limit(limit).offset(offset)        
+    
     # Execute query.
     #
     # `.unique()` prevents duplicate ORM objects when joins
@@ -353,3 +359,145 @@ def list_collection_items(
         )
         for item in items
     ]
+
+@router.patch("/{item_id}", response_model=CollectionItemRead)
+def update_collection_item(
+    item_id: int,
+    item_in: CollectionItemUpdate,
+    db: Session = Depends(get_db),
+):
+    """
+    Update an existing owned collection item.
+
+    This edits collection-specific data only:
+    - condition
+    - notes
+    - location
+    - price
+    - album rating
+    - tags
+
+    It intentionally does not edit album-level metadata such as:
+    - album title
+    - artist name
+    - release year
+    - genre
+
+    Those should be handled by separate album/metadata endpoints later.
+    """
+
+    # Find the collection item by primary key.
+    item = db.get(CollectionItem, item_id)
+
+    # If no item exists with that id, return a clear 404 response.
+    if item is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Collection item not found.",
+        )
+
+    # Convert the incoming Pydantic model to a dictionary,
+    # excluding fields the caller did not provide.
+    update_data = item_in.model_dump(exclude_unset=True)
+
+    # Update simple scalar fields if they were provided.
+    for field in [
+        "condition",
+        "notes",
+        "location",
+        "price",
+        "album_rating",
+    ]:
+        if field in update_data:
+            setattr(item, field, update_data[field])
+
+    # If tags was provided, replace the item's tag list.
+    #
+    # This makes the update behavior simple and predictable:
+    # the submitted list becomes the complete current tag set.
+    if "tags" in update_data:
+        tag_names = {
+            tag.strip()
+            for tag in update_data["tags"]
+            if tag.strip()
+        }
+
+        new_tags = []
+
+        for tag_name in tag_names:
+            tag = db.scalar(
+                select(Tag).where(Tag.name == tag_name)
+            )
+
+            if tag is None:
+                tag = Tag(name=tag_name)
+                db.add(tag)
+                db.flush()
+
+            new_tags.append(tag)
+
+        item.tags = new_tags
+
+    db.commit()
+    db.refresh(item)
+
+    return CollectionItemRead(
+        id=item.id,
+        artist_name=item.album.artist.name,
+        album_title=item.album.title,
+        release_year=item.album.release_year,
+        genre=item.album.genre,
+        condition=item.condition,
+        notes=item.notes,
+        location=item.location,
+        price=item.price,
+        album_rating=item.album_rating,
+        date_added=item.date_added,
+        tags=[
+            tag.name
+            for tag in item.tags
+        ],
+        tracks=[
+            TrackRead.model_validate(track)
+            for track in item.album.tracks
+        ],
+    )
+
+@router.delete("/{item_id}")
+def delete_collection_item(
+    item_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Delete an owned collection item.
+
+    V1 behavior:
+    - This performs a hard delete.
+    - The CollectionItem row is removed from the database.
+
+    Important:
+    - This does NOT delete the related Album or Artist.
+    - That is intentional because another owned copy may still reference
+      the same album metadata.
+    - Later, we may replace this with a soft-delete/archive workflow.
+    """
+
+    # Look up the owned collection item by primary key.
+    item = db.get(CollectionItem, item_id)
+
+    # Return a clear 404 error if the item does not exist.
+    if item is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Collection item not found.",
+        )
+
+    # Delete only the owned copy.
+    # Related album/artist metadata remains intact.
+    db.delete(item)
+    db.commit()
+
+    return {
+        "message": "Collection item deleted.",
+        "collection_item_id": item_id,
+    }

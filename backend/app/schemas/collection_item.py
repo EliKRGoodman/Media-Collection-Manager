@@ -57,7 +57,26 @@ class CollectionItemCreate(BaseModel):
     tags: list[str] = []
     tracks: list[TrackCreate] = []
 
+class CollectionItemUpdate(BaseModel):
+    """
+    Incoming API shape for editing an existing collection item.
 
+    All fields are optional because PATCH means:
+    "only update the fields the user provided."
+    """
+
+    condition: str | None = None
+    notes: str | None = None
+    location: str | None = None
+    price: Decimal | None = None
+    album_rating: int | None = Field(default=None, ge=1, le=10)
+
+    # Optional full tag replacement.
+    #
+    # If tags is omitted, tags are unchanged.
+    # If tags is provided, the item's tags are replaced with this list.
+    tags: list[str] | None = None
+    
 class CollectionItemRead(BaseModel):
     """
     Outgoing API shape for an owned album copy.
