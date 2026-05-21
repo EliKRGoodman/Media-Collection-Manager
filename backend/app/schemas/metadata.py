@@ -42,3 +42,16 @@ class MetadataImportResponse(BaseModel):
 
     artist_name: str
     album_title: str
+
+    
+class MusicBrainzTrackRead(BaseModel):
+    """
+    Track data returned from MusicBrainz before importing.
+
+    This is not a database model.
+    It is the API response shape for previewing external metadata.
+    """
+
+    title: str | None
+    track_number: int | None
+    runtime_seconds: int | None

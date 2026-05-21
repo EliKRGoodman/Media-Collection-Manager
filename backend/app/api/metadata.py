@@ -21,7 +21,10 @@ from app.schemas.metadata import (
     MetadataImportRequest,
     MetadataImportResponse,
 )
-from app.services.musicbrainz import search_release_groups
+from app.services.musicbrainz import (
+    get_tracks_for_release_group,
+    search_release_groups,
+)
 
 
 router = APIRouter(prefix="/metadata", tags=["metadata"])
@@ -145,3 +148,19 @@ def import_metadata(
         artist_name=artist.name,
         album_title=album.title,
     )
+
+@router.get("/musicbrainz/release-groups/{release_group_id}/tracks")
+def get_musicbrainz_tracks(release_group_id: str):
+    """
+    Preview tracks for a selected MusicBrainz release group.
+
+    This endpoint does not save anything.
+    It lets the frontend show the user a tracklist before import.
+    """
+
+    tracks = get_tracks_for_release_group(release_group_id)
+
+    return {
+        "release_group_id": release_group_id,
+        "tracks": tracks,
+    }

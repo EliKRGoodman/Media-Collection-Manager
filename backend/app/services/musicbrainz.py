@@ -86,3 +86,95 @@ def search_release_groups(query: str, limit: int = 10) -> list[dict]:
         )
 
     return results
+
+def get_tracks_for_release_group(release_group_id: str) -> list[dict]:
+    """
+    Get a simplified tracklist for a MusicBrainz release group.
+
+    Important MusicBrainz concept:
+    - A release group is the general album/work.
+    - A release is a specific version of that album.
+    - Tracklists live on releases, not directly on release groups.
+
+    V1 simplification:
+    - We look up the release group.
+    - We pick the first available release.
+    - We fetch that release with media + recordings.
+    - We convert the result into our local Track shape.
+
+    Later, if we model editions/pressings, the user should choose
+    a specific release instead of us automatically picking the first one.
+    """
+
+    headers = {
+        "User-Agent": "MediaCollectionManager/0.1 (local development)"
+    }
+
+    # First lookup:
+    # Get releases that belong to this release group.
+    release_group_response = httpx.get(
+        f"{MUSICBRAINZ_BASE_URL}/release-group/{release_group_id}",
+        params={
+            "fmt": "json",
+            "inc": "releases",
+        },
+        headers=headers,
+        timeout=10.0,
+    )
+
+    release_group_response.raise_for_status()
+    release_group_data = release_group_response.json()
+
+    releases = release_group_data.get("releases", [])
+
+    # If MusicBrainz has no releases attached, we cannot get tracks.
+    if not releases:
+        return []
+
+    # V1 simplification:
+    # Pick the first release MusicBrainz returns.
+    selected_release = releases[0]
+    release_id = selected_release.get("id")
+
+    if not release_id:
+        return []
+
+    # Second lookup:
+    # Fetch the selected release with media and recordings.
+    release_response = httpx.get(
+        f"{MUSICBRAINZ_BASE_URL}/release/{release_id}",
+        params={
+            "fmt": "json",
+            "inc": "recordings",
+        },
+        headers=headers,
+        timeout=10.0,
+    )
+
+    release_response.raise_for_status()
+    release_data = release_response.json()
+
+    tracks: list[dict] = []
+
+    # MusicBrainz release data is structured as:
+    # release -> media -> tracks
+    for medium in release_data.get("media", []):
+        for track in medium.get("tracks", []):
+            # MusicBrainz length is usually milliseconds.
+            length_ms = track.get("length")
+
+            runtime_seconds = None
+            if length_ms is not None:
+                runtime_seconds = round(length_ms / 1000)
+
+            tracks.append(
+                {
+                    "title": track.get("title"),
+                    "track_number": int(track["number"])
+                    if str(track.get("number", "")).isdigit()
+                    else None,
+                    "runtime_seconds": runtime_seconds,
+                }
+            )
+
+    return tracks
