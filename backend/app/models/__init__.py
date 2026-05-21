@@ -4,3 +4,4 @@ from app.models.collection_item import CollectionItem
 from app.models.collection_item_tag import collection_item_tags
 from app.models.tag import Tag
 from app.models.track import Track
+from app.models.location import Location

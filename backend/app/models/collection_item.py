@@ -27,8 +27,11 @@ class CollectionItem(Base):
         nullable=True,
     )
 
-    location: Mapped[str | None] = mapped_column(
-        String(100),
+    # Foreign key linking this owned item to a Location.
+    #
+    # Nullable for now because V1 allows incomplete data.
+    location_id: Mapped[int | None] = mapped_column(
+        ForeignKey("locations.id"),
         nullable=True,
     )
 
@@ -56,5 +59,14 @@ class CollectionItem(Base):
     tags = relationship(
         "Tag",
         secondary=collection_item_tags,
+        back_populates="collection_items",
+    )
+
+        # ORM relationship to Location.
+    #
+    # Allows:
+    # item.location
+    location = relationship(
+        "Location",
         back_populates="collection_items",
     )
