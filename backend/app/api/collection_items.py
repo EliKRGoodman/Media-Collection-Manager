@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.db.deps import get_db
 from app.models.album import Album
@@ -161,6 +160,44 @@ def list_collection_items(
     - genre
     """
 
+    # Define allowed sorting fields for this endpoint.
+    #
+    # This prevents silent failures where the user provides an unsupported
+    # sort field and the API quietly ignores it.
+    allowed_sort_fields = {
+        "artist",
+        "album",
+        "album_title",
+        "release_year",
+        "genre",
+    }
+
+    # Define allowed sort directions.
+    allowed_sort_orders = {
+        "asc",
+        "desc",
+    }
+
+    # Validate sort_by if provided.
+    if sort_by is not None and sort_by not in allowed_sort_fields:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Invalid sort_by value. "
+                "Allowed values are: artist, album, album_title, release_year, genre."
+            ),
+        )
+
+    # Normalize sort order before validation.
+    sort_order = sort_order.lower()
+
+    # Validate sort_order.
+    if sort_order not in allowed_sort_orders:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid sort_order value. Allowed values are: asc, desc.",
+        )
+    
     # Start with a base query selecting collection items.
     query = select(CollectionItem)
 
@@ -213,9 +250,6 @@ def list_collection_items(
     #
     # SORTING
     #
-
-    # Normalize sort order so the API is case-insensitive.
-    sort_order = sort_order.lower()
 
     # Sort by artist name.
     #
