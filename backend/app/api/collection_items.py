@@ -146,6 +146,19 @@ def list_collection_items(
     sort_order: str = Query(default="asc"),
 
     db: Session = Depends(get_db),
+
+        # Maximum number of collection items to return.
+    #
+    # This prevents the API from returning the entire collection at once
+    # once the database grows larger.
+    limit: int = Query(default=25, ge=1, le=100),
+
+    # Number of collection items to skip before returning results.
+    #
+    # Example:
+    # offset=0 returns the first page
+    # offset=25 returns the second page when limit=25
+    offset: int = Query(default=0, ge=0),
 ):
     """
     Return collection items with optional filtering and sorting.
@@ -300,7 +313,12 @@ def list_collection_items(
             query = query.order_by(Album.title.desc())
         else:
             query = query.order_by(Album.title.asc())
-            
+
+    # Apply pagination after filtering/sorting.
+    #
+    # limit controls page size.
+    # offset controls where the page starts.
+    query = query.limit(limit).offset(offset)        
     # Execute query.
     #
     # `.unique()` prevents duplicate ORM objects when joins
