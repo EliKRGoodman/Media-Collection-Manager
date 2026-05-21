@@ -49,6 +49,7 @@ class CollectionItemCreate(BaseModel):
     album_title: str = Field(min_length=1, max_length=255)
     release_year: int | None = None
     genre: str | None = None
+    image_url: str | None = None
     condition: str | None = None
     notes: str | None = None
     location_name: str | None = None
@@ -93,6 +94,7 @@ class CollectionItemRead(BaseModel):
     album_title: str
     release_year: int | None
     genre: str | None
+    image_url: str | None
     condition: str | None
     notes: str | None
     location_name: str | None
@@ -101,5 +103,6 @@ class CollectionItemRead(BaseModel):
     date_added: datetime
     tags: list[str]
     tracks: list[TrackRead]
+    
 
     model_config = {"from_attributes": True}

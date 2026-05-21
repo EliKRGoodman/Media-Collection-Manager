@@ -34,6 +34,21 @@ class Album(Base):
         back_populates="albums",
     )
 
+        # Primary image URL for the album.
+    #
+    # V1 simplification:
+    # We store only one image URL directly on Album.
+    #
+    # Later this can evolve into:
+    # - separate Image entity
+    # - multiple images
+    # - image types (front/back/inside)
+    # - local caching/storage
+    image_url: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+    )
+
     collection_items = relationship(
         "CollectionItem",
         back_populates="album",
@@ -52,3 +67,5 @@ class Album(Base):
         "Track",
         back_populates="album",
     )
+
+    
