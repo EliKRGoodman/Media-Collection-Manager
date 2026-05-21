@@ -13,6 +13,7 @@ from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.track import Track
 from app.db.deps import get_db
 from app.models.album import Album
 from app.models.artist import Artist
@@ -117,6 +118,29 @@ def import_metadata(
         db.flush()
 
     #
+    # TRACKS
+    #
+
+    tracks_created = 0
+
+    # Only create tracks if the album does not already have tracks.
+    #
+    # This prevents duplicate tracklists when the user imports or adds
+    # another owned copy of the same album later.
+    if not album.tracks:
+        for track_in in metadata_in.tracks:
+            track = Track(
+                album_id=album.id,
+                title=track_in.title,
+                track_number=track_in.track_number,
+                runtime_seconds=track_in.runtime_seconds,
+                rating=track_in.rating,
+            )
+
+            db.add(track)
+            tracks_created += 1
+
+    #
     # COLLECTION ITEM
     #
 
@@ -147,6 +171,7 @@ def import_metadata(
         collection_item_id=item.id,
         artist_name=artist.name,
         album_title=album.title,
+        tracks_created=tracks_created,
     )
 
 @router.get("/musicbrainz/release-groups/{release_group_id}/tracks")

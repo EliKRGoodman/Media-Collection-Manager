@@ -1,21 +1,45 @@
 """
 Pydantic schemas for metadata import/search workflows.
-
-These schemas define:
-- incoming metadata import requests,
-- outgoing import responses,
-- and future external metadata structures.
 """
 
 from pydantic import BaseModel, Field
+
+
+class MusicBrainzTrackRead(BaseModel):
+    """
+    Track data returned from MusicBrainz before importing.
+
+    This is not a database model.
+    It is the API response shape for previewing external metadata.
+    """
+
+    title: str | None
+    track_number: int | None
+    runtime_seconds: int | None
+
+
+class MetadataImportTrack(BaseModel):
+    """
+    Track data included when importing metadata.
+
+    This allows the frontend to:
+    1. search MusicBrainz,
+    2. preview tracks,
+    3. send selected track data into the import endpoint.
+    """
+
+    title: str = Field(min_length=1)
+    track_number: int | None = None
+    runtime_seconds: int | None = None
+    rating: int | None = Field(default=None, ge=1, le=10)
 
 
 class MetadataImportRequest(BaseModel):
     """
     Request body for importing a selected metadata result.
 
-    This represents the user's chosen MusicBrainz match,
-    plus optional collection-specific information.
+    This represents the user's chosen metadata match plus
+    optional collection-specific information.
     """
 
     artist_name: str = Field(min_length=1)
@@ -24,11 +48,12 @@ class MetadataImportRequest(BaseModel):
     release_year: int | None = None
     genre: str | None = None
 
-    # Optional collection-item fields
     condition: str | None = None
     notes: str | None = None
     location: str | None = None
     album_rating: int | None = Field(default=None, ge=1, le=10)
+
+    tracks: list[MetadataImportTrack] = []
 
 
 class MetadataImportResponse(BaseModel):
@@ -42,16 +67,4 @@ class MetadataImportResponse(BaseModel):
 
     artist_name: str
     album_title: str
-
-    
-class MusicBrainzTrackRead(BaseModel):
-    """
-    Track data returned from MusicBrainz before importing.
-
-    This is not a database model.
-    It is the API response shape for previewing external metadata.
-    """
-
-    title: str | None
-    track_number: int | None
-    runtime_seconds: int | None
+    tracks_created: int
