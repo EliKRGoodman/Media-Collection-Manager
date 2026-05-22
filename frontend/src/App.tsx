@@ -16,30 +16,63 @@ Current frontend goal:
 */
 function App() {
   const [items, setItems] = useState<CollectionItem[]>([]);
+
   const [loading, setLoading] = useState(true);
+
   const [error, setError] = useState<string | null>(null);
+
+  /*
+  Frontend search/filter/sort state.
+  */
+
+  const [search, setSearch] = useState("");
+
+  const [genre, setGenre] = useState("");
+
+  const [sortBy, setSortBy] = useState("");
+
+  const [sortOrder, setSortOrder] = useState("asc");
 
   /*
   Load collection items once when the app first renders.
   */
+  /*
+  Reload collection whenever:
+  - search changes
+  - genre changes
+  - sorting changes
+  */
   useEffect(() => {
+
     async function loadCollection() {
+
+      setLoading(true);
+
       try {
-        const data = await getCollectionItems();
+
+        const data = await getCollectionItems({
+          search,
+          genre,
+          sort_by: sortBy,
+          sort_order: sortOrder,
+        });
+
         setItems(data);
+
       } catch (err) {
+
         setError("Failed to load collection.");
+
       } finally {
+
         setLoading(false);
+
       }
     }
 
     loadCollection();
-  }, []);
 
-  if (loading) {
-    return <div className="page">Loading collection...</div>;
-  }
+  }, [search, genre, sortBy, sortOrder]);
 
   if (error) {
     return <div className="page error">{error}</div>;
@@ -52,9 +85,66 @@ function App() {
         <p>{items.length} collection items</p>
       </header>
 
-      {items.length === 0 ? (
+      <section className="controls">
+
+        {/* Search input */}
+
+        <input
+          type="text"
+          placeholder="Search artist, album, or track..."
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+
+        {/* Genre filter */}
+
+        <input
+          type="text"
+          placeholder="Filter by genre..."
+          value={genre}
+          onChange={(event) => setGenre(event.target.value)}
+        />
+
+        {/* Sort field */}
+
+        <select
+          value={sortBy}
+          onChange={(event) => setSortBy(event.target.value)}
+        >
+          <option value="">No Sorting</option>
+
+          <option value="artist">Artist</option>
+
+          <option value="album_title">Album Title</option>
+
+          <option value="release_year">Release Year</option>
+
+          <option value="genre">Genre</option>
+        </select>
+
+        {/* Sort direction */}
+
+        <select
+          value={sortOrder}
+          onChange={(event) => setSortOrder(event.target.value)}
+        >
+          <option value="asc">Ascending</option>
+
+          <option value="desc">Descending</option>
+        </select>
+
+      </section>
+
+      {/*{loading && (
+        <p className="status-message">Loading collection...</p>
+      )}
+
+      {error && <p className="error">{error}</p>}*/}
+
+      {!loading && !error && items.length === 0 ? (
         <p>No collection items found.</p>
       ) : (
+
         <section className="album-grid">
           {items.map((item) => (
             <article className="album-card" key={item.id}>

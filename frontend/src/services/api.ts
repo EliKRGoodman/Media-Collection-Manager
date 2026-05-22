@@ -1,32 +1,43 @@
 /*
 Central API helper layer.
-
-This keeps HTTP logic separated from React components.
-Later:
-- authentication,
-- error handling,
-- retries,
-- caching,
-- and API abstraction
-can all live here.
 */
 
 import type { CollectionItem } from "../types/collectionItem";
 
-/*
-Base backend URL.
-
-Vite frontend runs separately from FastAPI,
-so requests must target the backend server.
-*/
 const API_BASE_URL = "http://127.0.0.1:8000";
 
 /*
-Fetch all collection items from the backend.
+Optional collection query parameters.
 */
-export async function getCollectionItems(): Promise<CollectionItem[]> {
+export interface CollectionQueryParams {
+  search?: string;
+  genre?: string;
+  tag?: string;
+
+  sort_by?: string;
+  sort_order?: string;
+}
+
+/*
+Fetch collection items with optional filters/sorting.
+*/
+export async function getCollectionItems(
+  params: CollectionQueryParams = {}
+): Promise<CollectionItem[]> {
+
+  /*
+  Build query string dynamically from provided params.
+  */
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) {
+      searchParams.append(key, value);
+    }
+  });
+
   const response = await fetch(
-    `${API_BASE_URL}/collection-items/`
+    `${API_BASE_URL}/collection-items/?${searchParams.toString()}`
   );
 
   if (!response.ok) {
