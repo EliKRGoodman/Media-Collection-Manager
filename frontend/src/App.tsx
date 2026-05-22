@@ -21,6 +21,8 @@ function App() {
 
   const [error, setError] = useState<string | null>(null);
 
+  const [selectedItem, setSelectedItem] = useState<CollectionItem | null>(null);
+
   /*
   Frontend search/filter/sort state.
   */
@@ -135,6 +137,66 @@ function App() {
 
       </section>
 
+      {selectedItem && (
+        <section className="detail-panel">
+          <button
+            className="detail-close-button"
+            onClick={() => setSelectedItem(null)}
+          >
+            Close
+          </button>
+
+          <h2>{selectedItem.album_title}</h2>
+          <p>{selectedItem.artist_name}</p>
+
+          <p>
+            {selectedItem.release_year ?? "Unknown year"}
+            {selectedItem.genre ? ` • ${selectedItem.genre}` : ""}
+          </p>
+
+          {selectedItem.image_url && (
+            <img
+              className="detail-image"
+              src={selectedItem.image_url}
+              alt={`${selectedItem.album_title} cover`}
+            />
+          )}
+
+          <p>Condition: {selectedItem.condition ?? "Unknown"}</p>
+          <p>Location: {selectedItem.location_name ?? "None"}</p>
+          <p>Price: {selectedItem.price ?? "Unknown"}</p>
+          <p>Rating: {selectedItem.album_rating ?? "Unrated"}</p>
+
+          {selectedItem.notes && (
+            <p>Notes: {selectedItem.notes}</p>
+          )}
+
+          {selectedItem.tags.length > 0 && (
+            <div className="tag-list">
+              {selectedItem.tags.map((tag) => (
+                <span className="tag" key={tag}>
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {selectedItem.tracks.length > 0 && (
+            <>
+              <h3>Tracks</h3>
+              <ol>
+                {selectedItem.tracks.map((track) => (
+                  <li key={track.id}>
+                    {track.title}
+                    {track.rating ? ` — ${track.rating}/10` : ""}
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
+        </section>
+      )}
+
       {/*{loading && (
         <p className="status-message">Loading collection...</p>
       )}
@@ -147,7 +209,11 @@ function App() {
 
         <section className="album-grid">
           {items.map((item) => (
-            <article className="album-card" key={item.id}>
+            <article
+              className="album-card"
+              key={item.id}
+              onClick={() => setSelectedItem(item)}
+            >
               <div className="album-cover">
                 {item.image_url ? (
                   <img

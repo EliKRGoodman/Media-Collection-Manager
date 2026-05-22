@@ -125,3 +125,37 @@
 .error {
   color: #ff8a8a;
 }
+
+.album-card {
+  cursor: pointer;
+}
+
+.detail-panel {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+
+  border: 1px solid #2a2f3a;
+  border-radius: 16px;
+
+  background: #181b22;
+}
+
+.detail-close-button {
+  margin-bottom: 1rem;
+  padding: 0.5rem 0.75rem;
+
+  border: 1px solid #2a2f3a;
+  border-radius: 8px;
+
+  background: #263145;
+  color: #f5f5f5;
+
+  cursor: pointer;
+}
+
+.detail-image {
+  max-width: 240px;
+  width: 100%;
+  border-radius: 12px;
+  margin: 1rem 0;
+}
