@@ -1,6 +1,7 @@
 import "./App.css";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
 
 import {
   getCollectionItems,
@@ -77,12 +78,14 @@ Create collection item form state.
   const [editTagsInput, setEditTagsInput] = useState("");
 
   const [editLoading, setEditLoading] = useState(false);
+
+  const detailPanelRef = useRef<HTMLDivElement | null>(null);
   /*
   Create a new collection item from form input.
   */
 
   async function handleCreateCollectionItem(
-    event: React.FormEvent
+    event: FormEvent
   ) {
 
     event.preventDefault();
@@ -180,7 +183,7 @@ Create collection item form state.
   }
 
   async function handleUpdateCollectionItem(
-    event: React.FormEvent
+    event: FormEvent
   ) {
     event.preventDefault();
 
@@ -460,7 +463,10 @@ Create collection item form state.
       </section>
 
       {selectedItem && (
-        <section className="detail-panel">
+        <section
+          className="detail-panel"
+          ref={detailPanelRef}
+        >
           <button
             className="detail-close-button"
             onClick={() => setSelectedItem(null)}
@@ -618,7 +624,17 @@ Create collection item form state.
             <article
               className="album-card"
               key={item.id}
-              onClick={() => setSelectedItem(item)}
+              onClick={() => {
+                setSelectedItem(item);
+                setIsEditing(false);
+
+                setTimeout(() => {
+                  detailPanelRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  });
+                }, 0);
+              }}
             >
               <div className="album-cover">
                 {item.image_url ? (
