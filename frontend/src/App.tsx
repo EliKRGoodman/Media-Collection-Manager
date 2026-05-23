@@ -2,7 +2,10 @@ import "./App.css";
 
 import { useEffect, useState } from "react";
 
-import { getCollectionItems } from "./services/api";
+import {
+  getCollectionItems,
+  createCollectionItem,
+} from "./services/api";
 
 import type { CollectionItem } from "./types/collectionItem";
 
@@ -34,6 +37,119 @@ function App() {
   const [sortBy, setSortBy] = useState("");
 
   const [sortOrder, setSortOrder] = useState("asc");
+
+  /*
+Create collection item form state.
+*/
+
+  const [artistName, setArtistName] = useState("");
+
+  const [albumTitle, setAlbumTitle] = useState("");
+
+  const [releaseYear, setReleaseYear] = useState("");
+
+  const [genreInput, setGenreInput] = useState("");
+
+  const [imageUrl, setImageUrl] = useState("");
+
+  const [condition, setCondition] = useState("");
+
+  const [locationName, setLocationName] = useState("");
+
+  const [price, setPrice] = useState("");
+
+  const [albumRating, setAlbumRating] = useState("");
+
+  const [tagsInput, setTagsInput] = useState("");
+
+  const [createLoading, setCreateLoading] = useState(false);
+
+  const [showCreateForm, setShowCreateForm] = useState(false);
+
+  /*
+  Create a new collection item from form input.
+  */
+
+  async function handleCreateCollectionItem(
+    event: React.FormEvent
+  ) {
+
+    event.preventDefault();
+
+    setCreateLoading(true);
+
+    try {
+
+      await createCollectionItem({
+        artist_name: artistName,
+        album_title: albumTitle,
+
+        release_year: releaseYear
+          ? Number(releaseYear)
+          : undefined,
+
+        genre: genreInput || undefined,
+
+        image_url: imageUrl || undefined,
+
+        condition: condition || undefined,
+
+        location_name: locationName || undefined,
+
+        price: price
+          ? Number(price)
+          : undefined,
+
+        album_rating: albumRating
+          ? Number(albumRating)
+          : undefined,
+
+        tags: tagsInput
+          ? tagsInput
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+          : [],
+      });
+
+      /*
+      Reset form after successful creation.
+      */
+
+      setArtistName("");
+      setAlbumTitle("");
+      setReleaseYear("");
+      setGenreInput("");
+      setImageUrl("");
+      setCondition("");
+      setLocationName("");
+      setPrice("");
+      setAlbumRating("");
+      setTagsInput("");
+
+      /*
+      Refresh collection.
+      */
+
+      const updatedItems = await getCollectionItems({
+        search,
+        genre,
+        sort_by: sortBy,
+        sort_order: sortOrder,
+      });
+
+      setItems(updatedItems);
+
+    } catch (err) {
+
+      setError("Failed to create collection item.");
+
+    } finally {
+
+      setCreateLoading(false);
+
+    }
+  }
 
   /*
   Load collection items once when the app first renders.
@@ -86,6 +202,129 @@ function App() {
         <h1>Media Collection Manager</h1>
         <p>{items.length} collection items</p>
       </header>
+
+      <section className="create-form-section">
+
+        <button
+          type="button"
+          className="create-form-toggle"
+          onClick={() => setShowCreateForm(!showCreateForm)}
+        >
+          {showCreateForm ? "Add Collection Item" : "Add Collection Item"}
+        </button>
+
+        {showCreateForm && (
+          <form
+            className="create-form"
+            onSubmit={handleCreateCollectionItem}
+          >
+
+            <input
+              type="text"
+              placeholder="Artist Name"
+              value={artistName}
+              onChange={(event) =>
+                setArtistName(event.target.value)
+              }
+              required
+            />
+
+            <input
+              type="text"
+              placeholder="Album Title"
+              value={albumTitle}
+              onChange={(event) =>
+                setAlbumTitle(event.target.value)
+              }
+              required
+            />
+
+            <input
+              type="number"
+              placeholder="Release Year"
+              value={releaseYear}
+              onChange={(event) =>
+                setReleaseYear(event.target.value)
+              }
+            />
+
+            <input
+              type="text"
+              placeholder="Genre"
+              value={genreInput}
+              onChange={(event) =>
+                setGenreInput(event.target.value)
+              }
+            />
+
+            <input
+              type="text"
+              placeholder="Image URL"
+              value={imageUrl}
+              onChange={(event) =>
+                setImageUrl(event.target.value)
+              }
+            />
+
+            <input
+              type="text"
+              placeholder="Condition"
+              value={condition}
+              onChange={(event) =>
+                setCondition(event.target.value)
+              }
+            />
+
+            <input
+              type="text"
+              placeholder="Location"
+              value={locationName}
+              onChange={(event) =>
+                setLocationName(event.target.value)
+              }
+            />
+
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Price"
+              value={price}
+              onChange={(event) =>
+                setPrice(event.target.value)
+              }
+            />
+
+            <input
+              type="number"
+              placeholder="Rating"
+              value={albumRating}
+              onChange={(event) =>
+                setAlbumRating(event.target.value)
+              }
+            />
+
+            <input
+              type="text"
+              placeholder="Tags (comma separated)"
+              value={tagsInput}
+              onChange={(event) =>
+                setTagsInput(event.target.value)
+              }
+            />
+
+            <button
+              type="submit"
+              disabled={createLoading}
+            >
+              {createLoading
+                ? "Creating..."
+                : "Add Album"}
+            </button>
+
+          </form>
+        )}
+
+      </section>
 
       <section className="controls">
 

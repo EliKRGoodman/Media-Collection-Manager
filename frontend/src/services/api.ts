@@ -18,6 +18,23 @@ export interface CollectionQueryParams {
   sort_order?: string;
 }
 
+export interface CreateCollectionItemData {
+  artist_name: string;
+  album_title: string;
+
+  release_year?: number;
+  genre?: string;
+
+  image_url?: string;
+
+  condition?: string;
+  location_name?: string;
+
+  price?: number;
+  album_rating?: number;
+
+  tags?: string[];
+}
 /*
 Fetch collection items with optional filters/sorting.
 */
@@ -42,6 +59,33 @@ export async function getCollectionItems(
 
   if (!response.ok) {
     throw new Error("Failed to fetch collection items.");
+  }
+
+  return response.json();
+}
+
+/*
+Create a new collection item.
+*/
+export async function createCollectionItem(
+  data: CreateCollectionItemData
+): Promise<CollectionItem> {
+
+  const response = await fetch(
+    `${API_BASE_URL}/collection-items/`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify(data),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to create collection item.");
   }
 
   return response.json();
