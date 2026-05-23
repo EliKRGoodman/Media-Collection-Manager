@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import {
   getCollectionItems,
   createCollectionItem,
+  updateCollectionItem,
 } from "./services/api";
 
 import type { CollectionItem } from "./types/collectionItem";
@@ -66,6 +67,16 @@ Create collection item form state.
 
   const [showCreateForm, setShowCreateForm] = useState(false);
 
+  const [isEditing, setIsEditing] = useState(false);
+
+  const [editCondition, setEditCondition] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editLocationName, setEditLocationName] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editAlbumRating, setEditAlbumRating] = useState("");
+  const [editTagsInput, setEditTagsInput] = useState("");
+
+  const [editLoading, setEditLoading] = useState(false);
   /*
   Create a new collection item from form input.
   */
@@ -148,6 +159,78 @@ Create collection item form state.
 
       setCreateLoading(false);
 
+    }
+  }
+
+  function startEditingItem(item: CollectionItem) {
+    setEditCondition(item.condition ?? "");
+    setEditNotes(item.notes ?? "");
+    setEditLocationName(item.location_name ?? "");
+    setEditPrice(item.price !== null ? String(item.price) : "");
+    setEditAlbumRating(
+      item.album_rating !== null ? String(item.album_rating) : ""
+    );
+    setEditTagsInput(item.tags.join(", "));
+
+    setIsEditing(true);
+  }
+
+  function cancelEditingItem() {
+    setIsEditing(false);
+  }
+
+  async function handleUpdateCollectionItem(
+    event: React.FormEvent
+  ) {
+    event.preventDefault();
+
+    if (!selectedItem) {
+      return;
+    }
+
+    setEditLoading(true);
+
+    try {
+      const updatedItem = await updateCollectionItem(
+        selectedItem.id,
+        {
+          condition: editCondition || undefined,
+          notes: editNotes || undefined,
+          location_name: editLocationName || undefined,
+
+          price: editPrice
+            ? Number(editPrice)
+            : undefined,
+
+          album_rating: editAlbumRating
+            ? Number(editAlbumRating)
+            : undefined,
+
+          tags: editTagsInput
+            ? editTagsInput
+              .split(",")
+              .map((tag) => tag.trim())
+              .filter(Boolean)
+            : [],
+        }
+      );
+
+      setSelectedItem(updatedItem);
+      setIsEditing(false);
+
+      const updatedItems = await getCollectionItems({
+        search,
+        genre,
+        sort_by: sortBy,
+        sort_order: sortOrder,
+      });
+
+      setItems(updatedItems);
+
+    } catch (err) {
+      setError("Failed to update collection item.");
+    } finally {
+      setEditLoading(false);
     }
   }
 
@@ -401,23 +484,107 @@ Create collection item form state.
             />
           )}
 
-          <p>Condition: {selectedItem.condition ?? "Unknown"}</p>
-          <p>Location: {selectedItem.location_name ?? "None"}</p>
-          <p>Price: {selectedItem.price ?? "Unknown"}</p>
-          <p>Rating: {selectedItem.album_rating ?? "Unrated"}</p>
+          {isEditing ? (
+            <form
+              className="edit-form"
+              onSubmit={handleUpdateCollectionItem}
+            >
+              <input
+                type="text"
+                placeholder="Condition"
+                value={editCondition}
+                onChange={(event) =>
+                  setEditCondition(event.target.value)
+                }
+              />
 
-          {selectedItem.notes && (
-            <p>Notes: {selectedItem.notes}</p>
-          )}
+              <textarea
+                placeholder="Notes"
+                value={editNotes}
+                onChange={(event) =>
+                  setEditNotes(event.target.value)
+                }
+              />
 
-          {selectedItem.tags.length > 0 && (
-            <div className="tag-list">
-              {selectedItem.tags.map((tag) => (
-                <span className="tag" key={tag}>
-                  {tag}
-                </span>
-              ))}
-            </div>
+              <input
+                type="text"
+                placeholder="Location"
+                value={editLocationName}
+                onChange={(event) =>
+                  setEditLocationName(event.target.value)
+                }
+              />
+
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Price"
+                value={editPrice}
+                onChange={(event) =>
+                  setEditPrice(event.target.value)
+                }
+              />
+
+              <input
+                type="number"
+                placeholder="Rating"
+                value={editAlbumRating}
+                onChange={(event) =>
+                  setEditAlbumRating(event.target.value)
+                }
+              />
+
+              <input
+                type="text"
+                placeholder="Tags, comma separated"
+                value={editTagsInput}
+                onChange={(event) =>
+                  setEditTagsInput(event.target.value)
+                }
+              />
+
+              <div className="edit-form-actions">
+                <button type="submit" disabled={editLoading}>
+                  {editLoading ? "Saving..." : "Save Changes"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={cancelEditingItem}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <>
+              <p>Condition: {selectedItem.condition ?? "Unknown"}</p>
+              <p>Location: {selectedItem.location_name ?? "None"}</p>
+              <p>Price: {selectedItem.price ?? "Unknown"}</p>
+              <p>Rating: {selectedItem.album_rating ?? "Unrated"}</p>
+
+              {selectedItem.notes && (
+                <p>Notes: {selectedItem.notes}</p>
+              )}
+
+              {selectedItem.tags.length > 0 && (
+                <div className="tag-list">
+                  {selectedItem.tags.map((tag) => (
+                    <span className="tag" key={tag}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="edit-button"
+                onClick={() => startEditingItem(selectedItem)}
+              >
+                Edit Collection Info
+              </button>
+            </>
           )}
 
           {selectedItem.tracks.length > 0 && (

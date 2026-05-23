@@ -90,3 +90,66 @@ export async function createCollectionItem(
 
   return response.json();
 }
+
+export interface UpdateCollectionItemData {
+  condition?: string;
+  notes?: string;
+  location_name?: string;
+  price?: number;
+  album_rating?: number;
+  tags?: string[];
+}
+
+/*
+export async function updateCollectionItem(
+  itemId: number,
+  data: UpdateCollectionItemData
+): Promise<CollectionItem> {
+  const response = await fetch(
+    `${API_BASE_URL}/collection-items/${itemId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to update collection item.");
+  }
+
+  return response.json();
+}*/
+
+export interface UpdateCollectionItemData {
+  condition?: string;
+  notes?: string;
+  location_name?: string;
+  price?: number;
+  album_rating?: number;
+  tags?: string[];
+}
+
+export async function updateCollectionItem(
+  itemId: number,
+  data: UpdateCollectionItemData
+): Promise<CollectionItem> {
+  const response = await fetch(
+    `${API_BASE_URL}/collection-items/${itemId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to update collection item.");
+  }
+
+  return response.json();
+}
